@@ -1,0 +1,26 @@
+# 安装数据库
+http://blog.csdn.net/pansanday/article/details/54915916
+
+# 登录数据库
+mysql -u root -p
+
+# 创建名为 foooooodie_program 的数据库
+CREATE DATABASE IF NOT EXISTS foooooodie_program DEFAULT CHARSET utf8 COLLATE utf8_general_ci;
+
+# 查看数据库
+show databases;
+
+# 进入数据库进行操作
+use foooooodie_program;
+
+# 定义表，导入数据
+source Category.sql;
+source Preference.sql;
+source User.sql;
+source Food.sql;
+source Order.sql;
+source Suborder.sql;
+
+# 查看表格
+show tables;
+select * from TABLE_NAME;

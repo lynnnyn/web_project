@@ -1,6 +1,8 @@
 # 安装数据库
 http://blog.csdn.net/pansanday/article/details/54915916
 
+#cd 去sql文件所在文件夹
+
 # 登录数据库
 mysql -u root -p
 

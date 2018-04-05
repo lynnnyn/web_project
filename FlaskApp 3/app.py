@@ -70,12 +70,12 @@ def home():
 
     if request.method == "POST":
         search          = request.form['search']
-        price_all       = request.form['price']    #return true/false
-        price_low       = request.form['price_low']
-        price_high      = request.form['price_high']
-        foodscore_all   = request.form['foodscore']
-        foodscore_low   = request.form['foodscore_low']
-        foodscore_high  = request.form['foodscore_high']
+        # price_all       = request.form['price']    #return true/false
+        # price_low       = request.form['price_low']
+        # price_high      = request.form['price_high']
+        # foodscore_all   = request.form['foodscore']
+        # foodscore_low   = request.form['foodscore_low']
+        # foodscore_high  = request.form['foodscore_high']
 
         result  = {'Food.price': {'select': 'descent', 'low': '3', 'high': '10'},
                   'Food.score': {'select': 'ascent', 'low': '2', 'high': ''},
@@ -107,13 +107,6 @@ def home():
 
 
 
-
-
-
-
-
-
-
         print(search)
         # user_id = request.args.get('')
         # sql_search  = 'SELECT * FROM Food WHERE name = "%s" ' % search
@@ -123,33 +116,21 @@ def home():
         search_l    = process_dict(search_list, attr_food)
         return render_template('home.html', nearby = {},recommendation = {},search = search_l)
 
+
     elif request.method == 'GET':
-        # search = 'coffee'
-        # sql_search = 'SELECT * FROM Food WHERE name = "%s" ' % search
-        location   = '61820'
-        # location = user_zipcode
-        # sql_nearby = 'SELECT * FROM Food WHERE area = "%s" ' % location
 
-        prefer     = 'nyn88'
-        # prefer = user_name
-        # sql_prefer = 'SELECT * FROM User left join Preference on User.id = Preference.user_id WHERE User.name = "%s" ' % prefer
-        # sql_prefer = 'SELECT * FROM Food left join User on  left join Preference on User.user_id = Preference.user_id WHERE User.user_name = "%s" ' % prefer
-        sql_prefer = '(SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Suborder LEFT JOIN Orders ON Suborder.order_id = Orders.id LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Suborder.food_id WHERE User.name = '%s')) UNION (SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Food LEFT JOIN Preference ON Food.category_id = Preference.category_id LEFT JOIN User ON Preference.user_id = User.id WHERE User.name = '%s' AND Food.area = User.zipcode))' % (prefer,prefer)
+        user   = 'hzong2'
 
-    # attr_food   = ('id', 'name', 'area', 'price', 'maker_id', 'description', 'available_amount', 'score', 'category_id')
-    # attr_prefer = ('id', 'name','password_hash','email','phone_number','address','gender','selling_score','purchasing_score','zipcode','user_id','category_id')
+        sql_nearby = 'SELECT * FROM Food LEFT JOIN User ON Food.area = User.zipcode WHERE User.name = "%s"' % user
 
-    # search_list = db.session.execute(sql_search).fetchall()
+        sql_prefer = '(SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Suborder LEFT JOIN Orders ON Suborder.order_id = Orders.id LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Suborder.food_id WHERE User.name = "%s")) UNION (SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Food LEFT JOIN Preference ON Food.category_id = Preference.category_id LEFT JOIN User ON Preference.user_id = User.id WHERE User.name = "%s" AND Food.area = User.zipcode))' % (user,user)
+
     nearby_list = db.session.execute(sql_nearby).fetchall()
     prefer_list = db.session.execute(sql_prefer).fetchall()
-    # search_l    = process_dict(search_list, attr_food)
     nearby_l    = process_dict(nearby_list, attr_food)
     prefer_l    = process_dict(prefer_list, attr_food)
-    # print(prefer_l)
-
 
     return render_template('home.html', nearby = nearby_l, recommendation = prefer_l,search = {})
-
 
 
 

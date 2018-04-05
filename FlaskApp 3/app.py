@@ -133,7 +133,6 @@ def home():
     return render_template('home.html', nearby = nearby_l, recommendation = prefer_l,search = {})
 
 
-
     # pass
 #
 # # 附近，利用area

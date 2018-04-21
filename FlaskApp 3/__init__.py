@@ -151,7 +151,8 @@ def register():
 attr_food = (
 'id', 'name', 'area', 'price', 'maker_id', 'description', 'available_amount', 'score', 'category_id', 'image')
 attr_search = (
-'name', 'area', 'price', 'description', 'available_amount', 'score', 'AVG_PRICE', 'AVG_SCORE', 'seller_score', 'image')
+'id', 'name', 'area', 'price', 'description', 'available_amount', 'score', 'AVG_PRICE', 'AVG_SCORE', 'seller_score',
+'image')
 attr_friend = (
 'id', 'name', 'email', 'phone_number', 'address', 'gender', 'birth_year', 'selling_score', 'purchasing_score', 'image')
 attr_friendprefer = ('id', 'name')
@@ -203,19 +204,6 @@ def home():
         print('---------------------------------------------------')
         print(user)
         # print('\u2019')
-
-        sql_nearby = 'SELECT Food.* FROM Food LEFT JOIN User ON Food.area = User.zipcode WHERE Food.available_amount > 0 AND User.name = "%s" LIMIT 9' % user
-        # print(sql_nearby)
-
-        # sql_prefer = '(SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Suborder LEFT JOIN Orders ON Suborder.order_id = Orders.id LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Suborder.food_id WHERE User.name = "%s")) UNION (SELECT * FROM Food WHERE Food.category_id IN (SELECT DISTINCT Food.category_id FROM Food LEFT JOIN Preference ON Food.category_id = Preference.category_id LEFT JOIN User ON Preference.user_id = User.id WHERE User.name = "%s" AND Food.area = User.zipcode))' % (user,user)
-
-        # sql_prefer = 'SELECT * FROM Food LEFT JOIN User ON Food.area = User.zipcode WHERE User.name = "%s"' % user
-        sql_prefer = '(SELECT DISTINCT Food.* FROM Food, Food_Category WHERE Food_Category.food_id = Food.id AND Food_Category.category_id IN (SELECT DISTINCT Food_Category.category_id FROM Food_Category, Orders LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Orders.food_id WHERE User.name = "%s" AND Food_Category.food_id = Food.id)) UNION (SELECT DISTINCT Food.* FROM Food,Food_Category WHERE Food.id = Food_Category.food_id AND Food_Category.category_id IN( SELECT DISTINCT Food_Category.category_id FROM Food_Category,User,Preference,Food WHERE Food.available_amount > 0 AND User.id = Preference.user_id AND Food_Category.category_id = Preference.category_id AND User.id = Preference.user_id AND Food_Category.food_id = Food.id AND User.name = "%s" AND User.zipcode = Food.area)) LIMIT 9' % (
-        user, user)
-        nearby_list = db.session.execute(sql_nearby).fetchall()
-        prefer_list = db.session.execute(sql_prefer).fetchall()
-        nearby_l = process_dict(nearby_list, attr_food)
-        prefer_l = process_dict(prefer_list, attr_food)
 
         sql_user = 'SELECT gender, birth_year, zipcode FROM User'
         sql_order = 'SELECT id FROM Orders'
@@ -280,6 +268,27 @@ def home():
         similar_id = (
         similar_user(current_user.id)[0], similar_user(current_user.id)[1], similar_user(current_user.id)[2])
 
+        sql_nearby = 'SELECT Food.* FROM Food LEFT JOIN User ON Food.area = User.zipcode WHERE Food.available_amount > 0 AND User.name = "%s" LIMIT 9' % user
+
+        similar_userid = int(similar_user(current_user.id)[0])
+
+        sql_searchhis = 'SELECT User.search_1,User.search_2,User.search_3 FROM User WHERE User.id = %d' % current_user.id
+        searchhis_list = db.session.execute(sql_searchhis).fetchall()
+        search1 = searchhis_list[0][0]
+        search2 = searchhis_list[0][1]
+        search3 = searchhis_list[0][2]
+        print(search1)
+
+        # sql_prefer = '(SELECT DISTINCT Food.* FROM Food, Food_Category WHERE Food_Category.food_id = Food.id AND Food_Category.category_id IN (SELECT DISTINCT Food_Category.category_id FROM Food_Category, Orders LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Orders.food_id WHERE User.name = "%s" AND Food_Category.food_id = Food.id)) UNION (SELECT DISTINCT Food.* FROM Food,Food_Category WHERE Food.id = Food_Category.food_id AND Food_Category.category_id IN( SELECT DISTINCT Food_Category.category_id FROM Food_Category,User,Preference,Food WHERE Food.available_amount > 0 AND User.id = Preference.user_id AND Food_Category.category_id = Preference.category_id AND User.id = Preference.user_id AND Food_Category.food_id = Food.id AND User.name = "%s" AND User.zipcode = Food.area)) UNION (SELECT DISTINCT Food.* FROM Food,Orders,User WHERE Orders.food_id = Food.id AND User.id = Orders.buyer_id AND User.id = %d AND Food.id NOT IN (SELECT Food.id FROM Food,Orders,User WHERE Orders.food_id = Food.id AND User.id = Orders.buyer_id AND User.name = "%s")) LIMIT 9' %(user,user,similar_userid, user)
+
+        sql_prefer = '(SELECT DISTINCT Food.* FROM Food, Food_Category,Orders,User WHERE (Food_Category.food_id = Food.id AND Food_Category.category_id IN (SELECT DISTINCT Food_Category.category_id FROM Food_Category, Orders LEFT JOIN User ON Orders.buyer_id = User.id LEFT JOIN Food ON Food.id = Orders.food_id WHERE User.name = "%s" AND Food_Category.food_id = Food.id)) OR (Food.id = Food_Category.food_id AND Food_Category.category_id IN( SELECT DISTINCT Food_Category.category_id FROM Food_Category,User,Preference,Food WHERE Food.available_amount > 0 AND User.id = Preference.user_id AND Food_Category.category_id = Preference.category_id AND User.id = Preference.user_id AND Food_Category.food_id = Food.id AND User.name = "%s" AND User.zipcode = Food.area)) OR (Orders.food_id = Food.id AND User.id = Orders.buyer_id AND User.id = %d AND Food.id NOT IN (SELECT Food.id FROM Food,Orders,User WHERE Orders.food_id = Food.id AND User.id = Orders.buyer_id AND User.name = "%s")) OR(Food.name LIKE "%%%s%%" OR Food.name LIKE "%%%s%%" OR Food.name LIKE "%%%s%%")) ORDER BY Food.score DESC LIMIT 9' % (
+        user, user, similar_userid, user, search1, search2, search3)
+
+        nearby_list = db.session.execute(sql_nearby).fetchall()
+        prefer_list = db.session.execute(sql_prefer).fetchall()
+        nearby_l = process_dict(nearby_list, attr_food)
+        prefer_l = process_dict(prefer_list, attr_food)
+
         sql_similaruser = 'SELECT User.id,User.name,User.email,User.phone_number,User.address,User.gender,User.birth_year,User.selling_score,User.purchasing_score, User.image FROM User WHERE User.id IN %s' % (
         similar_id,)
         similaruser_list = db.session.execute(sql_similaruser).fetchall()
@@ -287,7 +296,7 @@ def home():
         # print(similaruser_l)
 
     # return render_template('home.html', nearby = nearby_l, recommendation = prefer_l,search = {})
-    return render_template('home.html', nearby=nearby_l, recommendation=prefer_l, search={})
+    return render_template('home.html', nearby=nearby_l, recommendation=prefer_l, search={}, users=similaruser_l)
 
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -295,7 +304,7 @@ def search():
     search_key = 'none'
     if request.method == "GET":
         search_key = request.args["search"]
-        sql_search = '(SELECT DISTINCT Food.name,Food.area,Food.price,Food.description,Food.available_amount,Food.score,AVG_PRICE,AVG_SCORE,User.selling_score,Food.image FROM Food LEFT JOIN(SELECT Food.name, Food.area ,AVG(Food.price) AS AVG_PRICE,AVG(Food.score) AS AVG_SCORE FROM Food GROUP BY Food.name, Food.area) NEW_FOOD ON Food.name = NEW_FOOD.name AND Food.area = NEW_FOOD.area LEFT JOIN User ON Food.maker_id = User.id LEFT JOIN Food_Category ON Food.id = Food_Category.food_id LEFT JOIN Category ON Food_Category.category_id = Category.id WHERE Food.available_amount > 0 AND Food.name LIKE "%%%s%%" OR Category.name LIKE "%%%s%%" OR User.name LIKE "%%%s%%" OR Food.area = "%s" ORDER BY Food.score DESC,Food.price,User.selling_score DESC,Food.available_amount DESC)' % (
+        sql_search = '(SELECT DISTINCT Food.id, Food.name,Food.area,Food.price,Food.description,Food.available_amount,Food.score,AVG_PRICE,AVG_SCORE,User.selling_score,Food.image FROM Food LEFT JOIN(SELECT Food.name, Food.area ,AVG(Food.price) AS AVG_PRICE,AVG(Food.score) AS AVG_SCORE FROM Food GROUP BY Food.name, Food.area) NEW_FOOD ON Food.name = NEW_FOOD.name AND Food.area = NEW_FOOD.area LEFT JOIN User ON Food.maker_id = User.id LEFT JOIN Food_Category ON Food.id = Food_Category.food_id LEFT JOIN Category ON Food_Category.category_id = Category.id WHERE Food.available_amount > 0 AND (Food.name LIKE "%%%s%%" OR Category.name LIKE "%%%s%%" OR User.name LIKE "%%%s%%" OR Food.area = "%s") ORDER BY Food.score DESC,Food.price,User.selling_score DESC,Food.available_amount DESC)' % (
         search_key, search_key, search_key, search_key)
         print(sql_search)
         search_list = db.session.execute(sql_search).fetchall()
@@ -319,12 +328,12 @@ def search():
             'filterAmountHigh': ''
         }
 
-        return render_template('search.html', search_key=search_key, search=search_l, condition=condition)
+        return render_template('search.html', search_key=search_key, search_results=search_l, condition=condition)
         # 1. pass searchkey to front end
         # 2. render template "search.html"
 
     if request.method == "POST":
-
+        print('---------------POST---------------')
         # data = request.form
         search_key = request.form["search"]
 
@@ -362,23 +371,23 @@ def search():
         }
         print(condition)
 
-        # print("search filter ------------------------------>")
-        # print("search filter ------------------------------>")
-        # print(search_key)
-        # print(inputFoodScore)
-        # print(inputPriceLow)
-        # print(inputPriceHigh)
-        # print(inputSellerScore)
-        # print(inputSellingAmountLow)
-        # print(inputSellingAmountHigh)
-        # print(inputFilterPriceLow)
-        # print(inputFilterPriceHigh)
-        # print(inputFilterFoodScoreLow)
-        # print(inputFilterFoodScoreHigh)
-        # print(inputFilterSellerScoreLow)
-        # print(inputFilterSellerScoreHigh)
-        # print(inputFilterAmountLow)
-        # print(inputFilterAmountHigh)
+        print("search filter ------------------------------>")
+        print("search filter ------------------------------>")
+        print(search_key)
+        print(inputFoodScore)
+        print(inputPriceLow)
+        print(inputPriceHigh)
+        print(inputSellerScore)
+        print(inputSellingAmountLow)
+        print(inputSellingAmountHigh)
+        print(inputFilterPriceLow)
+        print(inputFilterPriceHigh)
+        print(inputFilterFoodScoreLow)
+        print(inputFilterFoodScoreHigh)
+        print(inputFilterSellerScoreLow)
+        print(inputFilterSellerScoreHigh)
+        print(inputFilterAmountLow)
+        print(inputFilterAmountHigh)
 
         food_score_select = ''
         food_price_select = ''
@@ -389,17 +398,17 @@ def search():
             food_score_select = 'descent'
 
         if inputPriceLow:
-            food_price_select = 'descent'
-        elif inputPriceHigh:
             food_price_select = 'ascent'
+        elif inputPriceHigh:
+            food_price_select = 'descent'
 
         if inputSellerScore:
             seller_score_select = 'descent'
 
         if inputSellingAmountLow:
-            amount_select = 'descent'
-        elif inputFilterAmountHigh:
             amount_select = 'ascent'
+        elif inputFilterAmountHigh:
+            amount_select = 'descent'
 
         result = {
             "search": search_key,
@@ -456,13 +465,14 @@ def search():
         # print(sort)
         # print('where:', where)
 
-        sql_search = '(SELECT DISTINCT Food.name,Food.area,Food.price,Food.description,Food.available_amount,Food.score,AVG_PRICE,AVG_SCORE,User.selling_score,Food.image FROM Food LEFT JOIN(SELECT Food.name, Food.area ,AVG(Food.price) AS AVG_PRICE,AVG(Food.score) AS AVG_SCORE FROM Food GROUP BY Food.name, Food.area) NEW_FOOD ON Food.name = NEW_FOOD.name AND Food.area = NEW_FOOD.area LEFT JOIN User ON Food.maker_id = User.id LEFT JOIN Food_Category ON Food.id = Food_Category.food_id LEFT JOIN Category ON Food_Category.category_id = Category.id WHERE Food.available_amount > 0 AND Food.name LIKE "%%%s%%" OR Category.name LIKE "%%%s%%" OR User.name LIKE "%%%s%%" OR Food.area = "%s" %s ORDER BY %s)' % (
+        sql_search = '(SELECT DISTINCT Food.id,Food.name,Food.area,Food.price,Food.description,Food.available_amount,Food.score,AVG_PRICE,AVG_SCORE,User.selling_score,Food.image FROM Food LEFT JOIN(SELECT Food.name, Food.area ,AVG(Food.price) AS AVG_PRICE,AVG(Food.score) AS AVG_SCORE FROM Food GROUP BY Food.name, Food.area) NEW_FOOD ON Food.name = NEW_FOOD.name AND Food.area = NEW_FOOD.area LEFT JOIN User ON Food.maker_id = User.id LEFT JOIN Food_Category ON Food.id = Food_Category.food_id LEFT JOIN Category ON Food_Category.category_id = Category.id WHERE Food.available_amount > 0 AND (Food.name LIKE "%%%s%%" OR Category.name LIKE "%%%s%%" OR User.name LIKE "%%%s%%" OR Food.area = "%s") %s ORDER BY %s)' % (
         search_key, search_key, search_key, search_key, where, sort)
         search_list = db.session.execute(sql_search).fetchall()
         search_l = process_dict(search_list, attr_search)
-        # print(search_l)
+        print(sql_search)
+        print(search_l)
 
-    return render_template('search.html', search_key=search_key, search_results=search_l, condition=condition)
+        return render_template('search.html', search_key=search_key, search_results=search_l, condition=condition)
 
 
 @app.route('/profile', methods=['GET', "POST"])
@@ -472,7 +482,7 @@ def profile():
     attr_food = (
     'id', 'name', 'area', 'price', 'maker_id', 'description', 'available_amount', 'score', 'category_id', 'image')
     attr_order = ('seller_name', 'seller_phone', 'order_time', 'food_name', 'food_amount', 'price', 'note')
-    attr_orderid = ('buyer_name', 'buyer_phone', 'order_time', 'order_id', 'food_name', 'food_amount', 'price', 'note')
+    attr_orderid = ('buyer_name', 'buyer_phone', 'order_time', 'food_name', 'order_id', 'food_amount', 'price', 'note')
     attr_user = ('name', 'id', 'address', 'phone_number',
                  'gender', 'zipcode')
 
@@ -527,14 +537,16 @@ def profile():
                                                                                          Orders.time, Food.name,
                                                                                          Orders.food_amount,
                                                                                          Orders.total_price,
-                                                                                         Orders.note).all()
+                                                                                         Orders.note).order_by(
+            Orders.time).all()
 
         previous_orderid = db.session.query(Orders, User, Food).filter(Orders.seller_id == user_id).filter(
             Orders.food_id == Food.id).filter(Orders.buyer_id == User.id).with_entities(User.name, User.phone_number,
                                                                                         Orders.time, Food.name,
                                                                                         Orders.id, Orders.food_amount,
                                                                                         Orders.total_price,
-                                                                                        Orders.note).all()
+                                                                                        Orders.note).order_by(
+            Orders.time).all()
 
         order_list = process_dict(previous_order, attr_order)
         selling_orders = process_dict(previous_orderid, attr_orderid)
@@ -550,11 +562,14 @@ def profile():
 
 @app.route('/note', methods=['POST'])
 def note():
-    new_note = request.form['new_note']
+    new_note = request.form['newNote']
     order_id = request.form['order_id']
+    print("new_note: ", new_note)
+    print("order_id: ", order_id)
     order = db.session.query(Orders).get(int(order_id))
     order.note = new_note
     db.session.commit()
+    return redirect(url_for("profile"))
 
 
 @app.route('/category', methods=['GET', "POST"])
@@ -617,16 +632,12 @@ def category():
 
 @app.route('/description', methods=['POST'])
 def description():
-    # description = request.form['new_description']
-    # food_id = request.form['food_id']
-    # food = db.session.query(Food).get(int(food_id))
-    # food.description = description
-    # db.session.commit()
-    print("in description")
-    print(request.form["newDescription"])
-    print(request.form["food_id"])
-    # print(request.form[1])
-    return "change food description"
+    description = request.form["newDescription"]
+    food_id = request.form['food_id']
+    food = db.session.query(Food).get(int(food_id))
+    food.description = description
+    db.session.commit()
+    return redirect(url_for("foodProfile", food_id=food_id))
 
 
 @app.route('/myfriends', methods=['POST', 'GET'])
@@ -692,11 +703,33 @@ def friendProfile(user_id):
     print(friendprefer_l[0])
 
     if request.method == 'POST' and if_friend == False:
-        new_friend = Friend(muser_id=current_user.id, fuser_id=user_if)
+        new_friend = Friend(muser_id=current_user.id, fuser_id=user_id)
         db.session.add(new_friend)
         db.session.commit()
+        return redirect(url_for("friendProfile", user_id=user_id))
 
-    return render_template('friend_profile.html', info=info[0], foods=friendfood_l, friendprefer=friendprefer_l)
+    if request.method == 'POST' and if_friend == True:
+        # new_friend = db.session.query(Friend).filter(Friend.muser_id == current_user.id).filter(Friend.fuser_id == user_id).with_entities(Friend.muser_id,Friend.fuser_id).all()
+        new_friend = 'DELETE FROM Friend WHERE Friend.muser_id = %d and Friend.fuser_id = "%s"' % (
+        current_user.id, user_id)
+        print(new_friend)
+        db.engine.execute(new_friend)
+
+        return redirect(url_for("friendProfile", user_id=user_id))
+
+    # if request.method == 'POST':
+    #     if if_friend == False:
+    #         new_friend = Friend(muser_id = current_user.id, fuser_id = user_id)
+    #         db.session.add(new_friend)
+    #         db.session.commit()
+    #     elif if_friend == True:
+    #         del_friend = 'DELETE FROM Friend WHERE Friend.muser_id = %d and Friend.fuser_id = "%s"'%(current_user.id,user_id)
+    #         print(del_friend)
+    #         db.engine.execute(del_friend)
+    #     return redirect(url_for(friendProfile,user_id = user_id))
+
+    return render_template('friend_profile.html', info=info[0], foods=friendfood_l, friendprefer=friendprefer_l,
+                           friend_id=user_id, is_friend=if_friend)
 
 
 @app.route('/food/<food_id>', methods=['POST', 'GET'])
@@ -735,25 +768,30 @@ def foodProfile(food_id):
     print(order_list)
 
     if request.method == 'POST':
-        order_amount = request.form['amount']
+        order_amount = int(request.form['amount'])
 
         if order_amount > food[0]['available_amount']:
             return 'error!'
 
-        note = 'Edit note here...'
-        food_price = food[0]['price']
-        food_score = food[0]['score']
-        seller_score = food[0]['seller_score']
+        note = 'The maker hasn\'t left any notes yet...'
+        food_price = float(food[0]['price'])
+        food_score = float(food[0]['score'])
+        seller_score = float(food[0]['selling_score'])
         buyer_score = current_user.purchasing_score
+        seller_id = food[0]['maker_id']
 
-        new_oder = Orders(buyer_id=user_id, food_id=food_id, food_score=food_score, food_amount=order_amount, note=note,
-                          seller_score=seller_score, buyer_score=buyer_score, total_price=food_price * order_amount)
+        new_oder = Orders(buyer_id=user_id, seller_id=seller_id, food_id=food_id, food_score=food_score,
+                          food_amount=order_amount, note=note, seller_score=seller_score, buyer_score=buyer_score,
+                          total_price=food_price * order_amount)
+
         db.session.add(new_oder)
-        db.commit()
+        db.session.commit()
         # update availible amount
         new_food = db.session.query(Food).get(int(food_id))
-        new_food.amount = new_food.amount - order_amount
+        new_food.amount = new_food.available_amount - order_amount
         db.session.commit()
+
+        return redirect(url_for("profile"))
 
     return render_template('food_profile.html', food=food[0], orders=order_list, current_user=user_id)
 
